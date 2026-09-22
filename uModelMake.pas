@@ -211,14 +211,11 @@ begin
          Add('');
          Add('      procedure Insert(AValues: TStringList);');
          Add('');
-         Add('      procedure SelectJoin(AJoin: TStringList; var Q: TSQLQuery); overload;');
-         Add('      procedure SelectJoin(AJoin: TStringList; var Q: TFDQuery); overload;');
-         Add('');
          Add('      procedure SelectAll(var Q: TSQLQuery); overload;');
          Add('      procedure SelectAll(var Q: TFDQuery); overload;');
          Add('');
-         Add('      procedure SelectWhere(AWhere: TStringList; var Q: TSQLQuery); overload;');
-         Add('      procedure SelectWhere(AWhere: TStringList; var Q: TFDQuery); overload;');
+         Add('      procedure SelectWith(ASQL: TStringList; var Q: TSQLQuery); overload;');
+         Add('      procedure SelectWith(ASQL: TStringList; var Q: TFDQuery); overload;');
          Add('');
          Add('      procedure Query(var Q: TSQLQuery; AQuery: TStringList; ATypeQuery: TTypeQuery); overload;');
          Add('      procedure Query(var Q: TFDQuery; AQuery: TStringList; ATypeQuery: TTypeQuery); overload;');
