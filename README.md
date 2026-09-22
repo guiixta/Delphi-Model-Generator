@@ -1,6 +1,6 @@
-# ModelMake Utility
+﻿# ModelMake Utility
 
-**ModelMake** (`uModelMake.pas`) é uma utilitário em **Delphi** projetado para escanear o banco de dados e gerar automaticamente classes de modelo (*Models*) e a interface base (`uIModel.pas`). Ela mapeia as tabelas do seu banco de dados, identifica as chaves primárias (PK) e gera o código Delphi com operações básicas de CRUD.
+**ModelMake** (`uModelMake.pas`) é um utilitário em **Delphi** projetado para escanear o banco de dados e gerar automaticamente classes de modelo (*Models*) e a interface base (`uIModel.pas`). Ela mapeia as tabelas do seu banco de dados, identifica as chaves primárias (PK) e gera o código Delphi com operações básicas de CRUD.
 
 ---
 
@@ -9,6 +9,7 @@
 - **Escaneamento Automático:** Mapeia todas as tabelas do banco de dados e obtém suas chaves primárias (suporte nativo para Firebird via metadados `RDB$`).
 - **Geração Dinâmica de Código:** Cria automaticamente unidades Delphi (`u<NomeTabela>.pas`) contendo a estrutura da classe e seus métodos de persistência.
 - **Geração de Interface Base:** Cria a unidade `uIModel.pas`, definindo o contrato comum para todos os modelos gerados.
+- **Métodos Abstratos Poderosos:** Otimizado com o método `SelectWith`, permitindo consultas customizadas altamente flexíveis.
 - **Suporte Multi-Engine:** Compatível com **FireDAC** (`TFDConnection`) e **dbExpress** (`TSQLConnection`).
 
 ---
@@ -128,33 +129,40 @@ begin
 end;
 ```
 
-#### **Consulta (SelectAll / SelectWhere)**
+#### **Consulta Customizada (SelectWith)**
+O método `SelectWith` unifica e simplifica consultas ao banco, permitindo que você passe filtros (`WHERE`), junções (`JOIN`) e ordenações (`ORDER BY`) dinamicamente em uma única lista de comandos:
+
 ```pascal
 var
   ClienteModel: TCLIENTES;
   Q: TFDQuery;
-  Filtro: TStringList;
+  Especificacao: TStringList;
 begin
   Q := TFDQuery.Create(nil);
-  Filtro := TStringList.Create;
+  Especificacao := TStringList.Create;
   try
-    Filtro.Add('WHERE STATUS = ''A''');
+    // Você pode encadear JOINs, WHEREs e ORDER BYs livremente em um único parâmetro
+    Especificacao.Add('INNER JOIN CIDADES C ON C.CID_ID = CLIENTES.CID_ID');
+    Especificacao.Add('WHERE CLIENTES.STATUS = ''A''');
+    Especificacao.Add('ORDER BY CLIENTES.NOME DESC');
 
     ClienteModel := TCLIENTES.Create(FDConnection1);
     try
-      ClienteModel.SelectWhere(Filtro, Q);
-      
-      // Itera sobre os resultados
+      // Executa o SELECT básico acoplando as especificações fornecidas
+      ClienteModel.SelectWith(Especificacao, Q);
+
+      // Itera sobre os resultados obtidos
       while not Q.Eof do
       begin
-        // Fazer algo com os dados
+        // Acesse os dados da query normalmente
+        // Ex: NomeCliente := Q.FieldByName('NOME').AsString;
         Q.Next;
       end;
     finally
       ClienteModel.Free;
     end;
   finally
-    Filtro.Free;
+    Especificacao.Free;
     Q.Free;
   end;
 end;
@@ -164,4 +172,5 @@ end;
 
 ## 👤 Autor
 
-Desenvolvido por **guiixta** - [GitHub Profile](https://github.com/guiixta)
+Desenvolvido por **guiixta** - [GitHub Profile](https://github.com)
+

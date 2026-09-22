@@ -1,4 +1,4 @@
-{ ******************************************************* }
+﻿{ ******************************************************* }
 {                                                         }
 {                 ModelMake Utility                       }
 {                                                         }
@@ -351,18 +351,13 @@ begin
    Result.Add('');
    Result.Add('      procedure Insert(AValues: TStringList);');
    Result.Add('');
-   Result.Add
-     ('      procedure SelectJoin(AJoin: TStringList; var Q: TSQLQuery); overload;');
-   Result.Add
-     ('      procedure SelectJoin(AJoin: TStringList; var Q: TFDQuery); overload;');
-   Result.Add('');
    Result.Add('      procedure SelectAll(var Q: TSQLQuery); overload;');
    Result.Add('      procedure SelectAll(var Q: TFDQuery); overload;');
    Result.Add('');
    Result.Add
-     ('      procedure SelectWhere(AWhere: TStringList; var Q: TSQLQuery); overload;');
+     ('      procedure SelectWith(ASQL: TStringList; var Q: TSQLQuery); overload;');
    Result.Add
-     ('      procedure SelectWhere(AWhere: TStringList; var Q: TFDQuery); overload;');
+     ('      procedure SelectWith(ASQL: TStringList; var Q: TFDQuery); overload;');
    Result.Add('');
    Result.Add
      ('      procedure Query(var Q: TSQLQuery; AQuery: TStringList; ATypeQuery: TTypeQuery); overload;');
@@ -638,14 +633,14 @@ begin
    Result.Add('end;');
    Result.Add('');
    Result.Add('procedure T' +
-     '#NOME_TABELA#.SelectJoin(AJoin: TStringList; var Q: TFDQuery);');
+     '#NOME_TABELA#.SelectWith(ASQL: TStringList; var Q: TSQLQuery);');
    Result.Add('begin');
    Result.Add('   if not Assigned(Q) then');
    Result.Add('   begin');
    Result.Add('      raise Exception.Create(''Query não instanciado'');');
    Result.Add('   end;');
    Result.Add('');
-   Result.Add('   if AJoin.Count = 0 then');
+   Result.Add('   if ASQL.Count = 0 then');
    Result.Add('      exit;');
    Result.Add('');
    Result.Add('   try');
@@ -653,7 +648,7 @@ begin
    Result.Add('      begin');
    Result.Add('         SQL.Clear;');
    Result.Add('         SQL.Add(Format(''SELECT * FROM %s'', [FTable]));');
-   Result.Add('         SQL.AddStrings(AJoin);');
+   Result.Add('         SQL.AddStrings(ASQL);');
    Result.Add('         Open;');
    Result.Add('      end;');
    Result.Add('   except');
@@ -663,14 +658,14 @@ begin
    Result.Add('end;');
    Result.Add('');
    Result.Add('procedure T' +
-     '#NOME_TABELA#.SelectJoin(AJoin: TStringList; var Q: TSQLQuery);');
+     '#NOME_TABELA#.SelectWith(ASQL: TStringList; var Q: TFDQuery);');
    Result.Add('begin');
    Result.Add('   if not Assigned(Q) then');
    Result.Add('   begin');
    Result.Add('      raise Exception.Create(''Query não instanciado'');');
    Result.Add('   end;');
    Result.Add('');
-   Result.Add('   if AJoin.Count = 0 then');
+   Result.Add('   if ASQL.Count = 0 then');
    Result.Add('      exit;');
    Result.Add('');
    Result.Add('   try');
@@ -678,57 +673,7 @@ begin
    Result.Add('      begin');
    Result.Add('         SQL.Clear;');
    Result.Add('         SQL.Add(Format(''SELECT * FROM %s'', [FTable]));');
-   Result.Add('         SQL.AddStrings(AJoin);');
-   Result.Add('         Open;');
-   Result.Add('      end;');
-   Result.Add('   except');
-   Result.Add('      on E: Exception do');
-   Result.Add('         raise Exception.Create(''Error Data: '' + E.Message);');
-   Result.Add('   end;');
-   Result.Add('end;');
-   Result.Add('');
-   Result.Add('procedure T' +
-     '#NOME_TABELA#.SelectWhere(AWhere: TStringList; var Q: TSQLQuery);');
-   Result.Add('begin');
-   Result.Add('   if not Assigned(Q) then');
-   Result.Add('   begin');
-   Result.Add('      raise Exception.Create(''Query não instanciado'');');
-   Result.Add('   end;');
-   Result.Add('');
-   Result.Add('   if AWhere.Count = 0 then');
-   Result.Add('      exit;');
-   Result.Add('');
-   Result.Add('   try');
-   Result.Add('      with Q do');
-   Result.Add('      begin');
-   Result.Add('         SQL.Clear;');
-   Result.Add('         SQL.Add(Format(''SELECT * FROM %s'', [FTable]));');
-   Result.Add('         SQL.AddStrings(AWhere);');
-   Result.Add('         Open;');
-   Result.Add('      end;');
-   Result.Add('   except');
-   Result.Add('      on E: Exception do');
-   Result.Add('         raise Exception.Create(''Error Data: '' + E.Message);');
-   Result.Add('   end;');
-   Result.Add('end;');
-   Result.Add('');
-   Result.Add('procedure T' +
-     '#NOME_TABELA#.SelectWhere(AWhere: TStringList; var Q: TFDQuery);');
-   Result.Add('begin');
-   Result.Add('   if not Assigned(Q) then');
-   Result.Add('   begin');
-   Result.Add('      raise Exception.Create(''Query não instanciado'');');
-   Result.Add('   end;');
-   Result.Add('');
-   Result.Add('   if AWhere.Count = 0 then');
-   Result.Add('      exit;');
-   Result.Add('');
-   Result.Add('   try');
-   Result.Add('      with Q do');
-   Result.Add('      begin');
-   Result.Add('         SQL.Clear;');
-   Result.Add('         SQL.Add(Format(''SELECT * FROM %s'', [FTable]));');
-   Result.Add('         SQL.AddStrings(AWhere);');
+   Result.Add('         SQL.AddStrings(ASQL);');
    Result.Add('         Open;');
    Result.Add('      end;');
    Result.Add('   except');
