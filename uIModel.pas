@@ -17,6 +17,7 @@ uses
    Data.DB,
    FireDAC.Comp.Client,
    FireDAC.Comp.DataSet,
+   SimpleDS,
    FireDAC.Stan.Param;
 
 type
@@ -29,24 +30,33 @@ type
       FQuery: TDataSet;
       FTable: String;
       FPK: string;
+
    protected
       { protected declarations }
+      function LastID(var Q: TSQLQuery): integer; overload;
+      function LastID(var Q: TFDQuery): integer; overload;
+
+      function ProxID(var Q: TSQLQuery): integer; overload;
+      function ProxID(var Q: TFDQuery): integer; overload;
+
+      procedure DeleteWhere(Where: TStringList);
+
+      procedure UpdateWhere(AValues: TStringList; AWhere: TStringList);
+
+      procedure SelectWith(ASQL: TStringList; var Q: TSQLQuery); overload;
+      procedure SelectWith(ASQL: TStringList; var Q: TFDQuery); overload;
    public
       { public declarations }
-      procedure Delete(AID: integer); overload;
-      procedure DeleteWhere(Where: TStringList); overload;
+      procedure Delete(AID: integer);
 
-      procedure Update(AID: integer; AValues: TStringList); overload;
-      procedure UpdateWhere(AValues: TStringList; AWhere: TStringList);
-        overload;
+      procedure Update(AID: integer; AValues: TStringList);
 
       procedure Insert(AValues: TStringList);
 
       procedure SelectAll(var Q: TSQLQuery); overload;
       procedure SelectAll(var Q: TFDQuery); overload;
 
-      procedure SelectWith(ASQL: TStringList; var Q: TSQLQuery); overload;
-      procedure SelectWith(ASQL: TStringList; var Q: TFDQuery); overload;
+      procedure SelectAllDemand(var ASimpleDS: TSimpleDataSet; AQuant: integer);
 
       constructor Create(AConn: TSQLConnection; ATable: string; APK: string);
         reintroduce; overload;
@@ -60,7 +70,8 @@ implementation
 
 { TModelBase }
 
-constructor TModelBase.Create(AConn: TFDConnection; ATable: string; APK: string);
+constructor TModelBase.Create(AConn: TFDConnection; ATable: string;
+  APK: string);
 begin
    inherited Create;
    FQuery := TFDQuery.Create(nil);
@@ -71,7 +82,8 @@ begin
    FPK := APK;
 end;
 
-constructor TModelBase.Create(AConn: TSQLConnection; ATable: string; APK: string);
+constructor TModelBase.Create(AConn: TSQLConnection; ATable: string;
+  APK: string);
 begin
    inherited Create;
    FQuery := TSQLQuery.Create(nil);
@@ -193,6 +205,82 @@ begin
 
 end;
 
+function TModelBase.LastID(var Q: TFDQuery): integer;
+begin
+   if not Assigned(Q) then
+      raise Exception.Create('Query não instanciado');
+   try
+      with Q do
+      begin
+         SQL.Clear;
+         SQL.Add(Format('SELECT MAX(ID) AS LASTID FROM %s', [FTable]));
+         Open;
+
+         Result := FieldByName('LASTID').AsInteger;
+      end;
+   except
+      on E: Exception do
+         raise Exception.Create('Error Data: ' + E.Message);
+   end;
+end;
+
+function TModelBase.ProxID(var Q: TFDQuery): integer;
+begin
+   if not Assigned(Q) then
+      raise Exception.Create('Query não instanciado');
+   try
+      with Q do
+      begin
+         SQL.Clear;
+         SQL.Add(Format('SELECT MAX(ID) AS LASTID FROM %s', [FTable]));
+         Open;
+
+         Result := FieldByName('LASTID').AsInteger + 1;
+      end;
+   except
+      on E: Exception do
+         raise Exception.Create('Error Data: ' + E.Message);
+   end;
+end;
+
+function TModelBase.ProxID(var Q: TSQLQuery): integer;
+begin
+   if not Assigned(Q) then
+      raise Exception.Create('Query não instanciado');
+   try
+      with Q do
+      begin
+         SQL.Clear;
+         SQL.Add(Format('SELECT MAX(ID) AS LASTID FROM %s', [FTable]));
+         Open;
+
+         Result := FieldByName('LASTID').AsInteger + 1;
+      end;
+   except
+      on E: Exception do
+         raise Exception.Create('Error Data: ' + E.Message);
+   end;
+end;
+
+function TModelBase.LastID(var Q: TSQLQuery): integer;
+begin
+   if not Assigned(Q) then
+      raise Exception.Create('Query não instanciado');
+   try
+      with Q do
+      begin
+         SQL.Clear;
+         SQL.Add(Format('SELECT MAX(ID) AS LASTID FROM %s', [FTable]));
+         Open;
+
+         Result := FieldByName('LASTID').AsInteger;
+      end;
+   except
+      on E: Exception do
+         raise Exception.Create('Error Data: ' + E.Message);
+   end;
+end;
+
 procedure TModelBase.SelectAll(var Q: TSQLQuery);
 begin
 
@@ -233,6 +321,26 @@ begin
       on E: Exception do
          raise Exception.Create('Error Data: ' + E.Message);
    end;
+end;
+
+procedure TModelBase.SelectAllDemand(var ASimpleDS: TSimpleDataSet;
+  AQuant: integer);
+begin
+   if not Assigned(ASimpleDS) then
+      raise Exception.Create('Dataset não instanciado');
+
+   ASimpleDS.PacketRecords := AQuant;
+   try
+      with ASimpleDS do
+      begin
+        Close;
+        DataSet.CommandText := Format('SELECT * FROM %s', [FTable]);
+        Open;
+      end;
+   except on E: Exception do
+      raise Exception.Create('Error Data: ' + E.Message);
+   end;
+
 end;
 
 procedure TModelBase.SelectWith(ASQL: TStringList; var Q: TFDQuery);
@@ -321,7 +429,7 @@ begin
             end;
          tcExpress:
             begin
-               with TFDQuery(FQuery) do
+               with TSQLQuery(FQuery) do
                begin
                   SQL.Clear;
                   SQL.Add(Format('UPDATE %s', [FTable]));
@@ -375,7 +483,7 @@ begin
             end;
          tcExpress:
             begin
-               with TFDQuery(FQuery) do
+               with TSQLQuery(FQuery) do
                begin
                   SQL.Clear;
                   SQL.Add(Format('UPDATE %s', [FTable]));
