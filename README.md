@@ -26,9 +26,9 @@ A versão **1.0.3** expande o motor de mapeamento de chaves primárias, que ante
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Linguagem:** Delphi (Pascal) [2]
-- **Protocolos:** HTTP Nativo (`System.Net.HttpClient`) [2]
-- **Acesso a Dados:** FireDAC, dbExpress [2]
+- **Linguagem:** Delphi (Pascal) \[2\]
+- **Protocolos:** HTTP Nativo (`System.Net.HttpClient`) \[2\]
+- **Acesso a Dados:** FireDAC, dbExpress \[2\]
 - **Bancos de Dados Suportados:** Firebird, InterBase, SQL Server, PostgreSQL, MySQL, Oracle, SQLite (mapeamento automático de chaves em todos)
 
 ---
@@ -49,11 +49,16 @@ Models/
 
 ## 💻 Como Usar
 
-### 1. Inicialização e Geração dos Models
+### 1. Instalação
+
+Basta baixar ou copiar o arquivo `uModelMake.pas` para dentro do seu projeto Delphi e adicioná-lo à sua Unit list (ou incluir a pasta no *Search Path* do projeto). Não é necessário instalar nenhum pacote ou componente adicional — depois disso, é só seguir o tutorial de uso abaixo.
+
+### 2. Inicialização e Geração dos Models
 
 Para escanear o banco e gerar a estrutura desacoplada, basta passar a sua conexão de dados ativa e o diretório físico onde as Units devem ser salvas. A engine é detectada automaticamente a partir da conexão informada — não é necessário indicar o tipo de banco manualmente.
 
 #### Utilizando **FireDAC**:
+
 ```pascal
 uses uModelMake;
 
@@ -67,6 +72,7 @@ end;
 ```
 
 #### Utilizando **dbExpress**:
+
 ```pascal
 uses uModelMake;
 
@@ -78,11 +84,12 @@ end;
 
 ---
 
-### 2. Exemplo de Uso dos Models Gerados (CRUD Herdado)
+### 3. Exemplo de Uso dos Models Gerados (CRUD Herdado)
 
 O seu Controller passará a instanciar a classe da tabela correspondente. Como ela herda nativamente de `TModelBase`, todas as operações básicas de persistência funcionam instantaneamente.
 
 #### **Inclusão (Insert)**
+
 ```pascal
 var
   Valores: TStringList;
@@ -106,6 +113,7 @@ end;
 ```
 
 #### **Atualização (Update)**
+
 ```pascal
 var
   Valores: TStringList;
@@ -129,6 +137,7 @@ end;
 ```
 
 #### **Consulta Flexível com Encadeamento (SelectWith)**
+
 O método `SelectWith` unifica e simplifica consultas ao banco, permitindo que você passe filtros (`WHERE`), junções (`JOIN`) e ordenações (`ORDER BY`) dinamicamente em uma única lista de comandos:
 
 ```pascal
@@ -172,7 +181,7 @@ end;
 A partir da v1.0.3, o `TModelScan` identifica a engine da conexão informada e aplica a consulta de catálogo correspondente para resolver a PK de cada tabela:
 
 | Banco de Dados | Origem da Detecção | Estratégia de Consulta |
-|---|---|---|
+| --- | --- | --- |
 | Firebird | `DriverID = 'FB'` | Catálogo `RDB$RELATION_CONSTRAINTS` / `RDB$INDEX_SEGMENTS` |
 | InterBase | `DriverID = 'IB'` | Mesma rotina do Firebird (catálogo `RDB$...` compartilhado) |
 | SQL Server | `DriverID = 'MSSQL'` | `INFORMATION_SCHEMA.TABLE_CONSTRAINTS` / `KEY_COLUMN_USAGE` |
