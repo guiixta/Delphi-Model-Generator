@@ -12,6 +12,9 @@ uses
    System.Generics.Collections,
    Vcl.Dialogs,
    Winapi.Windows,
+   Data.SqlExpr,
+   FireDAC.Comp.Client,
+   FireDAC.Stan.Param,
    uIModel;
 
 type
