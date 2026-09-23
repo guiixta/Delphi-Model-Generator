@@ -22,27 +22,7 @@ uses
 type
    TTypeConn = (tcFireDac, tcExpress);
 
-   IModel = interface
-      ['{47E13D14-AFF6-4B03-96EC-697221423171}']
-
-      procedure Delete(AID: integer); overload;
-      procedure DeleteWhere(Where: TStringList); overload;
-
-      procedure Update(AID: integer; AValues: TStringList); overload;
-      procedure UpdateWhere(AValues: TStringList; AWhere: TStringList);
-        overload;
-
-      procedure Insert(AValues: TStringList);
-
-      procedure SelectAll(var Q: TSQLQuery); overload;
-      procedure SelectAll(var Q: TFDQuery); overload;
-
-      procedure SelectWith(ASQL: TStringList; var Q: TSQLQuery); overload;
-      procedure SelectWith(ASQL: TStringList; var Q: TFDQuery); overload;
-
-   end;
-
-   TModelBase = class(TInterfacedObject, IModel)
+   TModelBase = class
    private
       { private declarations }
       FTipoConnection: TTypeConn;
