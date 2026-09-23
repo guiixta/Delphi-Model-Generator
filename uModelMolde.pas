@@ -12,7 +12,7 @@ uses
    System.Generics.Collections,
    Vcl.Dialogs,
    Winapi.Windows,
-   Data.SqlExpr,
+   Data.SqlExpr,                                     1
    FireDAC.Comp.Client,
    FireDAC.Stan.Param,
    uIModel;
@@ -37,7 +37,7 @@ implementation
 
 { T{NOME_TABELA} }
 
-constructor T{NOME_TABELA}.Create(AConn: TFDConnection);
+constructor T{NOME_TABELA}.Create(AConn: TSQLConnection);
 begin
    inherited Create(AConn, '{NOME_TABELA}', '{NOME_PK}');
 end;
