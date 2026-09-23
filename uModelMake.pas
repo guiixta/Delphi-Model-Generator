@@ -1,6 +1,6 @@
 ﻿{ ******************************************************* }
 {                                                         }
-{                 ModelMake Utility                       }
+{              ModelMake Utility v1.0.3                   }
 {                                                         }
 {              Author: guiixta (GitHub)                   }
 {                                                         }
@@ -34,7 +34,9 @@ type
       FCaminhoUsado: string;
       FTables: TStringList;
       FCampos: TDictionary<String, String>;
-
+      DataBase: string;
+      FSQL: string;
+      procedure DefinirSQL(ADataBase: string);
       function getPKField(ATable: string; AConn: TSQLConnection)
         : String; overload;
       function getPKField(ATable: string; AConn: TFDConnection)
@@ -76,17 +78,11 @@ begin
    Result := '';
    Q := TFDQuery.Create(nil);
    Q.Connection := AConn;
-{$REGION 'SQL'}
    try
       with Q do
       begin
          SQL.Clear;
-         SQL.Add('SELECT ISG.RDB$FIELD_NAME AS CAMPO_PK');
-         SQL.Add('FROM RDB$RELATION_CONSTRAINTS RC');
-         SQL.Add('JOIN RDB$INDEX_SEGMENTS ISG ON RC.RDB$INDEX_NAME = ISG.RDB$INDEX_NAME');
-         SQL.Add('WHERE UPPER(RC.RDB$RELATION_NAME) = UPPER(:TABLE)');
-         SQL.Add('AND RC.RDB$CONSTRAINT_TYPE = ''PRIMARY KEY''');
-
+         SQL.Text := FSQL;
          ParamByName('TABLE').AsString := ATable;
          Open;
 
@@ -98,7 +94,6 @@ begin
    finally
       Q.Free;
    end;
-{$ENDREGION}
 end;
 
 function TModelScan.getPKField(ATable: string; AConn: TSQLConnection): String;
@@ -108,17 +103,11 @@ begin
    Result := '';
    Q := TSQLQuery.Create(nil);
    Q.SQLConnection := AConn;
-{$REGION 'SQL'}
    try
       with Q do
       begin
          SQL.Clear;
-         SQL.Add('SELECT ISG.RDB$FIELD_NAME AS CAMPO_PK');
-         SQL.Add('FROM RDB$RELATION_CONSTRAINTS RC');
-         SQL.Add('JOIN RDB$INDEX_SEGMENTS ISG ON RC.RDB$INDEX_NAME = ISG.RDB$INDEX_NAME');
-         SQL.Add('WHERE UPPER(RC.RDB$RELATION_NAME) = UPPER(:TABLE)');
-         SQL.Add('AND RC.RDB$CONSTRAINT_TYPE = ''PRIMARY KEY''');
-
+         SQL.Text := FSQL;
          ParamByName('TABLE').AsString := ATable;
          Open;
 
@@ -129,6 +118,80 @@ begin
       end;
    finally
       Q.Free;
+   end;
+end;
+
+procedure TModelScan.DefinirSQL(ADataBase: string);
+var
+   SQLLines: TStringList;
+begin
+{$REGION 'SQL'}
+   SQLLines := TStringList.Create;
+   try
+      case IndexText(ADataBase, ['FB', 'Firebird', 'IB', 'Interbase', 'MSSQL',
+        'PG', 'PostgreSQL', 'SQLite', 'Ora', 'Oracle', 'MySQL']) of
+         0, 1, 2, 3:
+            begin
+               with SQLLines do
+               begin
+                  add('SELECT ISG.RDB$FIELD_NAME AS CAMPO_PK');
+                  add('FROM RDB$RELATION_CONSTRAINTS RC');
+                  add('JOIN RDB$INDEX_SEGMENTS ISG ON RC.RDB$INDEX_NAME = ISG.RDB$INDEX_NAME');
+                  add('WHERE UPPER(RC.RDB$RELATION_NAME) = UPPER(:TABLE)');
+                  add('AND RC.RDB$CONSTRAINT_TYPE = ''PRIMARY KEY''');
+               end;
+            end;
+         4, 5, 6:
+            begin
+               with SQLLines do
+               begin
+                  add('SELECT KU.COLUMN_NAME AS CAMPO_PK');
+                  add('FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS TC');
+                  add('JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KU');
+                  add(' ON TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME');
+                  add('  AND TC.TABLE_SCHEMA = KU.TABLE_SCHEMA');
+                  add('WHERE TC.CONSTRAINT_TYPE = ''PRIMARY KEY''');
+                  add('AND UPPER(TC.TABLE_NAME) = UPPER(:TABLE)');
+               end;
+            end;
+         7:
+            begin
+               with SQLLines do
+               begin
+                  add('SELECT NAME AS CAMPO_PK');
+                  add('FROM PRAGMA_TABLE_INFO(:TABLE)');
+                  add('WHERE PK > 0');
+               end;
+            end;
+         8, 9:
+            begin
+               with SQLLines do
+               begin
+                  add('SELECT COLS.COLUMN_NAME AS CAMPO_PK');
+                  add('FROM ALL_CONSTRAINTS CONS');
+                  add('JOIN ALL_CONS_COLUMNS COLS');
+                  add('  ON CONS.CONSTRAINT_NAME = COLS.CONSTRAINT_NAME');
+                  add('  AND CONS.OWNER = COLS.OWNER');
+                  add('WHERE CONS.CONSTRAINT_TYPE = ''P''');
+                  add('AND UPPER(CONS.TABLE_NAME) = UPPER(:TABLE)');
+               end;
+            end;
+         10:
+            begin
+               with SQLLines do
+               begin
+                  add('SELECT COLUMN_NAME AS CAMPO_PK');
+                  add('FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE');
+                  add('WHERE CONSTRAINT_NAME = ''PRIMARY''');
+                  add('AND UPPER(TABLE_NAME) = UPPER(:TABLE)');
+                  add('AND TABLE_SCHEMA = DATABASE()');
+               end;
+            end;
+      end;
+
+      FSQL := SQLLines.Text;
+   finally
+      SQLLines.Free;
    end;
 {$ENDREGION}
 end;
@@ -157,9 +220,11 @@ begin
    FTables := TStringList.Create;
    FCampos := TDictionary<String, string>.Create;
    AConnection.GetTableNames(FTables);
+   DataBase := AConnection.DriverName;
+   DefinirSQL(DataBase);
 
    for I := 0 to FTables.Count - 1 do
-      FCampos.Add(FTables[I], getPKField(FTables[I], AConnection));
+      FCampos.add(FTables[I], getPKField(FTables[I], AConnection));
 
    GerarModels(FCampos);
 
@@ -177,9 +242,11 @@ begin
    FTables := TStringList.Create;
    FCampos := TDictionary<String, string>.Create;
    AConnection.GetTableNames('', '', '', FTables);
+   DataBase := AConnection.Params.DriverID;
+   DefinirSQL(DataBase);
 
    for I := 0 to FTables.Count - 1 do
-      FCampos.Add(FTables[I], getPKField(FTables[I], AConnection));
+      FCampos.add(FTables[I], getPKField(FTables[I], AConnection));
 
    GerarModels(FCampos);
 end;
@@ -313,5 +380,12 @@ begin
       end;
    end;
 end;
+
+initialization
+
+finalization
+
+if Assigned(ModelMake) then
+   FreeAndNil(ModelMake);
 
 end.

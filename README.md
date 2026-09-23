@@ -1,12 +1,22 @@
-﻿# ModelMake Utility `v1.0.2`
+﻿# ModelMake Utility `v1.0.3`
 
 **ModelMake** (`uModelMake.pas`) é um utilitário inteligente em **Delphi** projetado para escanear a estrutura do seu banco de dados e gerar automaticamente uma arquitetura de dados baseada no padrão MVC.
 
 A partir da versão **1.0.2**, o utilitário adota o padrão de **Herança de Classe Base Reutilizável**. O motor do utilitário busca as estruturas base de contratos (`uIModel.pas` contendo a classe pai `TModelBase`) diretamente do repositório remoto ou de um caminho local, gerando arquivos de tabelas específicos totalmente limpos e focados, prontos para a extensão segura de regras de negócio sem quebrar o MVC.
 
+A versão **1.0.3** expande o motor de mapeamento de chaves primárias, que antes era exclusivo do Firebird, para reconhecer e gerar models corretamente em **múltiplos bancos de dados**.
+
 ---
 
-## 🚀 Novas Funcionalidades (v1.0.2)
+## 🚀 Novas Funcionalidades (v1.0.3)
+
+- **Suporte Multi-Banco de Dados:** O mapeamento automático de chave primária (PK), antes restrito ao Firebird, agora reconhece também **InterBase**, **SQL Server**, **PostgreSQL**, **MySQL**, **Oracle** e **SQLite**, cada um com a consulta de catálogo apropriada ao seu dialeto.
+- **Detecção Automática de Engine:** A engine do banco é identificada via `Params.DriverID` (FireDAC) ou `DriverName` (dbExpress) na própria conexão informada, dispensando qualquer configuração manual de qual SQL usar.
+- **Firebird e InterBase Unificados:** Como ambos compartilham o mesmo catálogo de sistema (`RDB$...`), uma única rotina de mapeamento atende as duas engines.
+- **Reaproveitamento ANSI:** SQL Server e PostgreSQL, por seguirem o padrão `INFORMATION_SCHEMA`, compartilham a mesma rotina de consulta de PK, reduzindo duplicação de código.
+- **PK via `PRAGMA_TABLE_INFO` no SQLite:** Consulta de chave primária no SQLite migrada para a função de tabela `pragma_table_info()`, permitindo uso de parâmetro nomeado (`:TABLE`) e alias de coluna, em vez do `PRAGMA` tradicional.
+
+## 🚀 Funcionalidades (v1.0.2)
 
 - **Arquitetura Baseada em Herança:** As classes geradas para cada tabela nascem limpas (sem repetição de código) e herdam toda a inteligência do CRUD genérico de uma classe pai comum (`TModelBase`).
 - **Templates Dinâmicos Remotos/Locais:** Integração nativa com `THTTPClient` para obter os moldes atualizados em tempo real via GitHub (branch `main`), contando também com uma rotina de contingência para carregamento de arquivos locais (`ObterLocal`) - Se preferir.
@@ -19,7 +29,7 @@ A partir da versão **1.0.2**, o utilitário adota o padrão de **Herança de Cl
 - **Linguagem:** Delphi (Pascal) [2]
 - **Protocolos:** HTTP Nativo (`System.Net.HttpClient`) [2]
 - **Acesso a Dados:** FireDAC, dbExpress [2]
-- **Banco de Dados:** Firebird (Mapeamento automático de chaves) [2]
+- **Bancos de Dados Suportados:** Firebird, InterBase, SQL Server, PostgreSQL, MySQL, Oracle, SQLite (mapeamento automático de chaves em todos)
 
 ---
 
@@ -41,7 +51,7 @@ Models/
 
 ### 1. Inicialização e Geração dos Models
 
-Para escanear o banco e gerar a estrutura desacoplada, basta passar a sua conexão de dados ativa e o diretório físico onde as Units devem ser salvas:
+Para escanear o banco e gerar a estrutura desacoplada, basta passar a sua conexão de dados ativa e o diretório físico onde as Units devem ser salvas. A engine é detectada automaticamente a partir da conexão informada — não é necessário indicar o tipo de banco manualmente.
 
 #### Utilizando **FireDAC**:
 ```pascal
@@ -50,6 +60,8 @@ uses uModelMake;
 procedure GerarModelosComFireDAC;
 begin
   // Busca os templates remotamente e cria a árvore de herança de banco na pasta indicada
+  // Funciona com FDConnection apontando para Firebird, InterBase, SQL Server,
+  // PostgreSQL, MySQL, Oracle ou SQLite
   TModelScan.Create(FDConnection1, 'C:\MeuProjeto\Models\');
 end;
 ```
@@ -155,6 +167,24 @@ end;
 
 ---
 
+## 🗄️ Mapeamento de Chave Primária por Banco de Dados
+
+A partir da v1.0.3, o `TModelScan` identifica a engine da conexão informada e aplica a consulta de catálogo correspondente para resolver a PK de cada tabela:
+
+| Banco de Dados | Origem da Detecção | Estratégia de Consulta |
+|---|---|---|
+| Firebird | `DriverID = 'FB'` | Catálogo `RDB$RELATION_CONSTRAINTS` / `RDB$INDEX_SEGMENTS` |
+| InterBase | `DriverID = 'IB'` | Mesma rotina do Firebird (catálogo `RDB$...` compartilhado) |
+| SQL Server | `DriverID = 'MSSQL'` | `INFORMATION_SCHEMA.TABLE_CONSTRAINTS` / `KEY_COLUMN_USAGE` |
+| PostgreSQL | `DriverID = 'PG'` | `INFORMATION_SCHEMA` (mesma rotina do SQL Server) |
+| MySQL | `DriverID = 'MySQL'` | `INFORMATION_SCHEMA.KEY_COLUMN_USAGE` (`CONSTRAINT_NAME = 'PRIMARY'`) |
+| Oracle | `DriverID = 'Ora'` | `ALL_CONSTRAINTS` / `ALL_CONS_COLUMNS` (`CONSTRAINT_TYPE = 'P'`) |
+| SQLite | `DriverID = 'SQLite'` | `PRAGMA_TABLE_INFO(:TABLE)` (`WHERE PK > 0`) |
+
+> **Nota:** tabelas com chave primária composta retornam apenas o primeiro campo mapeado em todas as engines — o suporte a PK composta está previsto para uma versão futura.
+
+---
+
 ## 🛡️ Mantendo o MVC Correto (Extensão de Negócio)
 
 A grande vantagem da versão **1.0.2** é a blindagem arquitetural. O arquivo `uCLIENTES.pas` gerado nasce apenas com os construtores configurados. Se você precisar aplicar uma regra de negócio complexa ou um SQL matemático que o Controller não deve conhecer (ex: cálculo de Cosseno de Similaridade Vetorial), **escreva o método de negócio diretamente dentro da classe filha**:
@@ -175,5 +205,4 @@ type
 
 ## 👤 Autor
 
-Desenvolvido por **guiixta** - [GitHub Profile](https://github.com/guiixta) 
-
+Desenvolvido por **guiixta** - [GitHub Profile](https://github.com/guiixta)
