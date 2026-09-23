@@ -1,36 +1,37 @@
-﻿# ModelMake Utility
+﻿# ModelMake Utility `v1.0.2`
 
-**ModelMake** (`uModelMake.pas`) é um utilitário em **Delphi** projetado para escanear o banco de dados e gerar automaticamente classes de modelo (*Models*) e a interface base (`uIModel.pas`). Ela mapeia as tabelas do seu banco de dados, identifica as chaves primárias (PK) e gera o código Delphi com operações básicas de CRUD.
+**ModelMake** (`uModelMake.pas`) é um utilitário inteligente em **Delphi** projetado para escanear a estrutura do seu banco de dados e gerar automaticamente uma arquitetura de dados baseada no padrão MVC.
+
+A partir da versão **1.0.2**, o utilitário adota o padrão de **Herança de Classe Base Reutilizável**. O motor do utilitário busca as estruturas base de contratos (`uIModel.pas` contendo a classe pai `TModelBase`) diretamente do repositório remoto ou de um caminho local, gerando arquivos de tabelas específicos totalmente limpos e focados, prontos para a extensão segura de regras de negócio sem quebrar o MVC.
 
 ---
 
-## 🚀 Funcionalidades
+## 🚀 Novas Funcionalidades (v1.0.2)
 
-- **Escaneamento Automático:** Mapeia todas as tabelas do banco de dados e obtém suas chaves primárias (suporte nativo para Firebird via metadados `RDB$`).
-- **Geração Dinâmica de Código:** Cria automaticamente unidades Delphi (`u<NomeTabela>.pas`) contendo a estrutura da classe e seus métodos de persistência.
-- **Geração de Interface Base:** Cria a unidade `uIModel.pas`, definindo o contrato comum para todos os modelos gerados.
-- **Métodos Abstratos Poderosos:** Otimizado com o método `SelectWith`, permitindo consultas customizadas altamente flexíveis.
-- **Suporte Multi-Engine:** Compatível com **FireDAC** (`TFDConnection`) e **dbExpress** (`TSQLConnection`).
+- **Arquitetura Baseada em Herança:** As classes geradas para cada tabela nascem limpas (sem repetição de código) e herdam toda a inteligência do CRUD genérico de uma classe pai comum (`TModelBase`).
+- **Templates Dinâmicos Remotos/Locais:** Integração nativa com `THTTPClient` para obter os moldes atualizados em tempo real via GitHub (branch `main`), contando também com uma rotina de contingência para carregamento de arquivos locais (`ObterLocal`) - Se preferir.
+- **Fim da Redundância (SelectWith):** Consolidação dos antigos métodos separados de filtragem e junção em um único método abstrato maleável.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Linguagem:** Delphi (Pascal)
-- **Acesso a Dados:** FireDAC, dbExpress
-- **Banco de Dados:** Firebird (para resolução automática de PKs)
+- **Linguagem:** Delphi (Pascal) [2]
+- **Protocolos:** HTTP Nativo (`System.Net.HttpClient`) [2]
+- **Acesso a Dados:** FireDAC, dbExpress [2]
+- **Banco de Dados:** Firebird (Mapeamento automático de chaves) [2]
 
 ---
 
-## 📂 Arquivos Gerados Automatizados
+## 📂 Arquivos Gerados e Arquitetura
 
-Ao executar a classe `TModelScan`, a seguinte estrutura de arquivos é criada no diretório de saída:
+Ao executar a classe `TModelScan`, o diretório de saída conterá:
 
 ```text
 Models/
-├── uIModel.pas          # Interface base (IModel)
-├── uCLIENTES.pas        # Modelo gerado para a tabela CLIENTES
-├── uPRODUTOS.pas        # Modelo gerado para a tabela PRODUTOS
+├── uIModel.pas          # Contrato da Interface (IModel) + Implementação da Classe Pai (TModelBase)
+├── uCLIENTES.pas        # Classe filha TCLIENTES = class(TModelBase) -> Limpa e extensível
+├── uPRODUTOS.pas        # Classe filha TPRODUTOS = class(TModelBase) -> Limpa e extensível
 └── ...
 ```
 
@@ -40,7 +41,7 @@ Models/
 
 ### 1. Inicialização e Geração dos Models
 
-Para escanear o banco e gerar os modelos, basta instanciar a classe `TModelScan` informando a conexão e, opcionalmente, o diretório de destino:
+Para escanear o banco e gerar a estrutura desacoplada, basta passar a sua conexão de dados ativa e o diretório físico onde as Units devem ser salvas:
 
 #### Utilizando **FireDAC**:
 ```pascal
@@ -48,7 +49,7 @@ uses uModelMake;
 
 procedure GerarModelosComFireDAC;
 begin
-  // Instancia e gera todos os modelos na pasta padrão (\Models) ou em um caminho customizado
+  // Busca os templates remotamente e cria a árvore de herança de banco na pasta indicada
   TModelScan.Create(FDConnection1, 'C:\MeuProjeto\Models\');
 end;
 ```
@@ -65,9 +66,9 @@ end;
 
 ---
 
-### 2. Exemplo de Uso dos Models Gerados
+### 2. Exemplo de Uso dos Models Gerados (CRUD Herdado)
 
-Após a geração, você pode utilizar as classes geradas diretamente na sua aplicação para realizar operações no banco de dados.
+O seu Controller passará a instanciar a classe da tabela correspondente. Como ela herda nativamente de `TModelBase`, todas as operações básicas de persistência funcionam instantaneamente.
 
 #### **Inclusão (Insert)**
 ```pascal
@@ -82,7 +83,7 @@ begin
 
     ClienteModel := TCLIENTES.Create(FDConnection1);
     try
-      ClienteModel.Insert(Valores);
+      ClienteModel.Insert(Valores); // Método herdado automaticamente da classe pai
     finally
       ClienteModel.Free;
     end;
@@ -104,7 +105,7 @@ begin
 
     ClienteModel := TCLIENTES.Create(FDConnection1);
     try
-      // Atualiza o registro com PK (ID) = 10
+      // Atualiza o registro buscando dinamicamente pelo campo PK resolvido no banco
       ClienteModel.Update(10, Valores);
     finally
       ClienteModel.Free;
@@ -115,21 +116,7 @@ begin
 end;
 ```
 
-#### **Exclusão (Delete)**
-```pascal
-var
-  ClienteModel: TCLIENTES;
-begin
-  ClienteModel := TCLIENTES.Create(FDConnection1);
-  try
-    ClienteModel.Delete(10);
-  finally
-    ClienteModel.Free;
-  end;
-end;
-```
-
-#### **Consulta Customizada (SelectWith)**
+#### **Consulta Flexível com Encadeamento (SelectWith)**
 O método `SelectWith` unifica e simplifica consultas ao banco, permitindo que você passe filtros (`WHERE`), junções (`JOIN`) e ordenações (`ORDER BY`) dinamicamente em uma única lista de comandos:
 
 ```pascal
@@ -141,9 +128,9 @@ begin
   Q := TFDQuery.Create(nil);
   Especificacao := TStringList.Create;
   try
-    // Você pode encadear JOINs, WHEREs e ORDER BYs livremente em um único parâmetro
-    Especificacao.Add('INNER JOIN CIDADES C ON C.CID_ID = CLIENTES.CID_ID');
-    Especificacao.Add('WHERE CLIENTES.STATUS = ''A''');
+    // Você pode encadear cláusulas livremente em um único parâmetro de strings
+    Especificacao.Add('INNER JOIN CIDADES C ON C.CID_ID = CLIENTES.CID_ID ');
+    Especificacao.Add('WHERE CLIENTES.STATUS = ''A'' ');
     Especificacao.Add('ORDER BY CLIENTES.NOME DESC');
 
     ClienteModel := TCLIENTES.Create(FDConnection1);
@@ -151,11 +138,9 @@ begin
       // Executa o SELECT básico acoplando as especificações fornecidas
       ClienteModel.SelectWith(Especificacao, Q);
 
-      // Itera sobre os resultados obtidos
       while not Q.Eof do
       begin
-        // Acesse os dados da query normalmente
-        // Ex: NomeCliente := Q.FieldByName('NOME').AsString;
+        // Acesse os dados da query mapeada normalmente
         Q.Next;
       end;
     finally
@@ -170,7 +155,25 @@ end;
 
 ---
 
+## 🛡️ Mantendo o MVC Correto (Extensão de Negócio)
+
+A grande vantagem da versão **1.0.2** é a blindagem arquitetural. O arquivo `uCLIENTES.pas` gerado nasce apenas com os construtores configurados. Se você precisar aplicar uma regra de negócio complexa ou um SQL matemático que o Controller não deve conhecer (ex: cálculo de Cosseno de Similaridade Vetorial), **escreva o método de negócio diretamente dentro da classe filha**:
+
+```pascal
+// Dentro do arquivo uCLIENTES.pas criado pelo utilitário:
+type
+   TCLIENTES = class(TModelBase)
+   public
+      constructor Create(AConn: TFDConnection); overload;
+      
+      // Seu método customizado que o Controller chamará de forma limpa:
+      procedure CalcularSimilaridadeDeClientes(IdA, IdB: Integer; var Q: TFDQuery);
+   end;
+```
+
+---
+
 ## 👤 Autor
 
-Desenvolvido por **guiixta** - [GitHub Profile](https://github.com)
+Desenvolvido por **guiixta** - [GitHub Profile](https://github.com/guiixta) 
 
