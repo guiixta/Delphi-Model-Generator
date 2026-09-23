@@ -1,4 +1,4 @@
-unit uModelMolde;
+unit u{NOME_TABELA};
 
 interface
 
