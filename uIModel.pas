@@ -78,9 +78,9 @@ type
 
 implementation
 
-{ TModel }
+{ TModelBase }
 
-constructor TModel.Create(AConn: TFDConnection; ATable: string; APK: string);
+constructor TModelBase.Create(AConn: TFDConnection; ATable: string; APK: string);
 begin
    inherited Create;
    FQuery := TFDQuery.Create(nil);
@@ -91,7 +91,7 @@ begin
    FPK := APK;
 end;
 
-constructor TModel.Create(AConn: TSQLConnection; ATable: string; APK: string);
+constructor TModelBase.Create(AConn: TSQLConnection; ATable: string; APK: string);
 begin
    inherited Create;
    FQuery := TSQLQuery.Create(nil);
@@ -102,7 +102,7 @@ begin
    FPK := APK;
 end;
 
-procedure TModel.Delete(AID: integer);
+procedure TModelBase.Delete(AID: integer);
 begin
    case FTipoConnection of
       tcFireDac:
@@ -130,7 +130,7 @@ begin
    end;
 end;
 
-procedure TModel.DeleteWhere(Where: TStringList);
+procedure TModelBase.DeleteWhere(Where: TStringList);
 begin
    if Where.Count = 0 then
       exit;
@@ -159,14 +159,14 @@ begin
    end;
 end;
 
-destructor TModel.Destroy;
+destructor TModelBase.Destroy;
 begin
    if Assigned(FQuery) then
       FreeAndNil(FQuery);
    inherited;
 end;
 
-procedure TModel.Insert(AValues: TStringList);
+procedure TModelBase.Insert(AValues: TStringList);
 var
    Values, Colunas: string;
    I: integer;
@@ -183,7 +183,7 @@ begin
          Colunas := Format('%s, %s', [Colunas, AValues.Names[I]]);
 
       if Values = '' then
-         Values := Format('%s', [AValues.ValuesFromIndex[I]])
+         Values := Format('%s', [AValues.ValueFromIndex[I]])
       else
          Values := Format('%s, %s', [Values, AValues.ValueFromIndex[I]]);
    end;
@@ -213,7 +213,7 @@ begin
 
 end;
 
-procedure TModel.SelectAll(var Q: TSQLQuery);
+procedure TModelBase.SelectAll(var Q: TSQLQuery);
 begin
 
    if not Assigned(Q) then
@@ -235,7 +235,7 @@ begin
 
 end;
 
-procedure TModel.SelectAll(var Q: TFDQuery);
+procedure TModelBase.SelectAll(var Q: TFDQuery);
 begin
    if not Assigned(Q) then
    begin
@@ -255,31 +255,7 @@ begin
    end;
 end;
 
-procedure TModel.SelectWith(ASQL: TStringList; var Q: TFDQuery);
-begin
-   if not Assigned(Q) then
-   begin
-      raise Exception.Create('Query não instanciado');
-   end;
-
-   if ASQL.Count = 0 then
-      exit;
-
-   try
-      with Q do
-      begin
-         SQL.Clear;
-         SQL.Add(Format('SELECT * FROM %s', [FTable]));
-         SQL.AddStrings(ASQL);
-         Open;
-      end;
-   except
-      on E: Exception do
-         raise Exception.Create('Error Data: ' + E.Message);
-   end;
-end;
-
-procedure TModel.SelectWith(ASQL: TStringList; var Q: TSQLQuery);
+procedure TModelBase.SelectWith(ASQL: TStringList; var Q: TFDQuery);
 begin
    if not Assigned(Q) then
    begin
@@ -303,7 +279,31 @@ begin
    end;
 end;
 
-procedure TModel.Update(AID: integer; AValues: TStringList);
+procedure TModelBase.SelectWith(ASQL: TStringList; var Q: TSQLQuery);
+begin
+   if not Assigned(Q) then
+   begin
+      raise Exception.Create('Query não instanciado');
+   end;
+
+   if ASQL.Count = 0 then
+      exit;
+
+   try
+      with Q do
+      begin
+         SQL.Clear;
+         SQL.Add(Format('SELECT * FROM %s', [FTable]));
+         SQL.AddStrings(ASQL);
+         Open;
+      end;
+   except
+      on E: Exception do
+         raise Exception.Create('Error Data: ' + E.Message);
+   end;
+end;
+
+procedure TModelBase.Update(AID: integer; AValues: TStringList);
 var
    Sets: String;
    I: integer;
@@ -358,7 +358,7 @@ begin
    end;
 end;
 
-procedure TModel.UpdateWhere(AValues, AWhere: TStringList);
+procedure TModelBase.UpdateWhere(AValues, AWhere: TStringList);
 var
    Sets: String;
    I: integer;
@@ -410,12 +410,5 @@ begin
          raise Exception.Create('Error Data: ' + E.Message);
    end;
 end;
-
-initialization
-
-finalization
-
-if Assigned(Model) then
-   FreeAndNil(Model);
 
 end.
